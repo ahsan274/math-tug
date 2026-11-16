@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MathFace-Off</title>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,#eef6ff,#f8fbff);min-height:100vh;color:#172033}
+button{touch-action:manipulation}
+.container{max-width:1200px;margin:auto;padding:22px}
+header{text-align:center;margin-bottom:18px}
+h1{font-size:clamp(28px,4vw,48px)}
+.subtitle{color:#64748b;margin-top:7px}
+.controls,.online{background:#fff;border-radius:18px;padding:15px;box-shadow:0 8px 30px rgba(15,23,42,.08);display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.online{display:none}.online.show{display:flex}
+select,button,.codeinput{border:0;border-radius:10px;padding:11px 16px;font-size:15px}
+select,.codeinput{border:1px solid #d7dee9;background:#fff}
+.codeinput{width:130px;text-align:center;text-transform:uppercase;letter-spacing:3px;font-weight:bold}
+button{cursor:pointer;font-weight:bold}
+button:disabled,select:disabled{opacity:.5;cursor:not-allowed}
+.start{background:#172033;color:#fff}.reset{background:#e8eef7;color:#172033}.net{background:#1683e8;color:#fff}
+.netstatus{width:100%;text-align:center;font-weight:bold;font-size:14px;color:#64748b}
+.netstatus.ok{color:#16833c}.netstatus.bad{color:#d92828}.netstatus.warn{color:#b26a00}
+.roomcode{display:none;width:100%;text-align:center}
+.roomcode.show{display:block}
+.roomcode b{font-size:30px;letter-spacing:6px;color:#172033}
+.roomcode button{margin-left:8px;padding:8px 12px;font-size:13px;background:#e8eef7}
+.game{display:grid;grid-template-columns:1fr 1.35fr 1fr;gap:16px;align-items:stretch}
+.card,.center{background:#fff;border-radius:20px;padding:18px;box-shadow:0 10px 35px rgba(15,23,42,.09)}
+.team1{border-top:6px solid #1683e8}.team2{border-top:6px solid #e53935}
+.team-title{display:flex;justify-content:space-between;align-items:center;font-size:20px;font-weight:bold;gap:8px}
+.badge{padding:6px 10px;border-radius:20px;font-size:12px;white-space:nowrap}
+.blue{background:#e6f2ff;color:#0874d1}.red{background:#ffebeb;color:#d92828}
+.question{min-height:92px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:30px;font-weight:800;margin:14px 0;background:#f7faff;border-radius:14px;padding:6px}
+.answer{width:100%;padding:13px;border:2px solid #dbe4ef;border-radius:10px;font-size:22px;text-align:center;outline:none}
+.answer:focus{border-color:#578ee8}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.keypad button{background:#f2f6fb;border:1px solid #e1e8f0;padding:13px;font-size:18px}
+.keypad button:active{background:#dbe7f5}
+.keypad .clear{background:#ffe8e8;color:#c62828}.keypad .check{background:#dff7e8;color:#17823b}
+.status{text-align:center;min-height:23px;margin-top:9px;font-weight:bold}
+.oppnote{display:none;text-align:center;color:#64748b;margin:14px 0 4px;font-weight:bold}
+.card.opp .question,.card.opp .answer,.card.opp .keypad{display:none}
+.card.opp .oppnote{display:block}
+.center{display:flex;flex-direction:column;justify-content:center;align-items:center}
+.scoreboard{display:flex;justify-content:space-between;width:100%;font-weight:bold}
+.score1{color:#1683e8}.score2{color:#e53935}
+.timer{font-size:22px;font-weight:bold;margin:10px}
+.timer span{font-variant-numeric:tabular-nums}
+
+/* ---------- Tug of war scene ---------- */
+.field{--shift:0%;--pf:clamp(40px,9vw,56px);width:100%;height:200px;position:relative;overflow:hidden;border-radius:14px;
+ background:linear-gradient(#e9f5ff 0 68%,#cfe8b5 68% 100%)}
+.center-line{position:absolute;left:50%;top:10px;bottom:10px;border-left:2px dashed #94a3b8;z-index:0}
+.rope{position:absolute;left:3%;right:3%;top:calc(50% + 2px);height:12px;transform:translateY(-50%);border-radius:8px;z-index:1;
+ background:repeating-linear-gradient(-60deg,#c58b4a 0 5px,#8a5a24 5px 8px,#e0ae6e 8px 11px);
+ box-shadow:0 3px 3px rgba(0,0,0,.35),inset 0 2px 2px rgba(255,255,255,.35),inset 0 -2px 2px rgba(0,0,0,.3);
+ transition:background-position .55s ease}
+.flag{position:absolute;left:calc(50% + var(--shift));top:calc(50% + 2px);transform:translate(-50%,-50%);z-index:3;transition:left .55s ease;display:flex;flex-direction:column;align-items:center}
+.flag i{width:22px;height:22px;border-radius:50%;background:#7b4b1f;border:4px solid #f3c77b}
+.flag s{width:12px;height:20px;background:#e53935;border-radius:0 0 6px 6px;margin-top:-2px;box-shadow:0 2px 3px rgba(0,0,0,.25)}
+.group{position:absolute;top:50%;transform:translateY(-50%);display:flex;z-index:2;transition:left .55s ease,right .55s ease}
+.g1{left:calc(14% + var(--shift))}.g2{right:calc(14% - var(--shift))}
+.p{font-size:var(--pf);line-height:1;position:relative;display:block;filter:drop-shadow(0 0 5px var(--c))}
+.g1{--c:rgba(22,131,232,.9)}.g2{--c:rgba(229,57,53,.9)}
+.g1 .p{transform:rotate(-12deg)}.g2 .p{transform:rotate(12deg)}
+.p::after{content:"✊";position:absolute;top:44%;font-size:.38em;filter:none}
+.g1 .p::after{right:-.12em}.g2 .p::after{left:-.12em}
+.g1 .p+.p{margin-left:-.12em}.g2 .p+.p{margin-left:-.12em}
+@keyframes pull1{50%{transform:rotate(-24deg) translateX(-6px)}}
+@keyframes pull2{50%{transform:rotate(24deg) translateX(6px)}}
+.g1.pulling .p{animation:pull1 .5s}.g2.pulling .p{animation:pull2 .5s}
+.field{height:auto!important;aspect-ratio:2/1;background:none}
+.field svg{display:block;width:100%;height:100%}
+#t1,#t2,#flag{transition:transform .55s ease}
+.pw{transform-box:fill-box;transform-origin:50% 100%}
+@keyframes jerk1{50%{transform:translateX(-5px) rotate(-4deg)}}
+@keyframes jerk2{50%{transform:translateX(5px) rotate(4deg)}}
+.pw1.pulling{animation:jerk1 .5s}.pw2.pulling{animation:jerk2 .5s}
+.instructions{text-align:center;color:#64748b;font-size:13px;margin-top:8px}
+
+.result{position:fixed;inset:0;background:rgba(15,23,42,.68);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.result-box{background:#fff;border-radius:24px;padding:35px;text-align:center;max-width:420px;width:100%;box-shadow:0 20px 70px rgba(0,0,0,.3)}
+.result-box h2{font-size:34px;margin-bottom:10px}
+.result-box p{color:#64748b;margin-bottom:20px}
+
+@media(max-width:850px){
+ .container{padding:12px}
+ .game{grid-template-columns:1fr;gap:12px}   /* Team 1 → rope → Team 2 */
+ .controls select,.controls button{flex:1 1 130px}
+ .card,.center{padding:14px}
+ .question{min-height:70px;font-size:26px;margin:10px 0}
+ .keypad button{padding:14px}
+ .field{height:170px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="container">
+ <header>
+  <h1>MathFace-Off</h1>
+  <p class="subtitle">Solve faster and pull the rope toward your team!</p>
+ </header>
+
+ <div class="controls">
+  <label><b>Mode:</b></label>
+  <select id="mode">
+   <option value="local">Same device (2 players)</option>
+   <option value="online">Online (2 devices)</option>
+  </select>
+  <label><b>Difficulty:</b></label>
+  <select id="difficulty">
+   <option value="easy">Easy — Addition, Subtraction, Multiplication</option>
+   <option value="medium">Medium — Mixed Operations</option>
+   <option value="hard">Hard — Larger &amp; Multi-Step Questions</option>
+  </select>
+  <label><b>Time:</b></label>
+  <select id="timeLimit"></select>
+  <button class="start" id="startBtn">▶ Start Game</button>
+  <button class="reset" id="resetBtn">↻ Reset</button>
+ </div>
+
+ <div class="online" id="onlinePanel">
+  <button class="net" id="createBtn">Create room</button>
+  <span>or</span>
+  <input class="codeinput" id="roomInput" maxlength="5" placeholder="CODE" autocomplete="off">
+  <button class="net" id="joinBtn">Join room</button>
+  <div class="roomcode" id="roomBox">Room code: <b id="roomCode"></b><button id="copyBtn">Copy invite link</button></div>
+  <div class="netstatus" id="netStatus">Create a room and share the code, or enter a friend's code to join.</div>
+ </div>
+
+ <div class="game">
+  <section class="card team1" id="card1">
+   <div class="team-title"><span id="name1">🔵 Team 1</span><span class="badge blue" id="score1">0 points</span></div>
+   <div class="question" id="q1">Press Start</div>
+   <div class="oppnote">Opponent is solving…</div>
+   <input class="answer" id="a1" type="number" inputmode="numeric" placeholder="Enter answer">
+   <div class="keypad" id="kp1"></div>
+   <div class="status" id="status1"></div>
+  </section>
+
+  <section class="center">
+   <div class="scoreboard">
+    <span class="score1">TEAM 1: <b id="pull1">0</b></span>
+    <span class="score2">TEAM 2: <b id="pull2">0</b></span>
+   </div>
+   <div class="timer">⏱ <span id="timer">--</span></div>
+   <div class="field" id="field">
+    <svg viewBox="0 0 400 200" role="img" aria-label="Tug of war: two people on each side pulling a rope">
+     <defs>
+      <pattern id="twist" width="8" height="12" patternUnits="userSpaceOnUse">
+       <rect width="8" height="12" fill="#8a5a24"/>
+       <polygon points="-1,12 3,0 6,0 2,12" fill="#dcae6c"/>
+       <line x1="6.5" y1="0" x2="2.5" y2="12" stroke="#4e300f" stroke-width="1" opacity=".7"/>
+      </pattern>
+      <g id="man">
+       <path d="M-32 22 L-14 52" style="stroke:#2b3445" stroke-width="8" stroke-linecap="round" fill="none"/>
+       <path d="M-32 22 L-47 52" style="stroke:#1f2735" stroke-width="8" stroke-linecap="round" fill="none"/>
+       <ellipse cx="-9" cy="54" rx="9" ry="4" fill="#111"/><ellipse cx="-51" cy="54" rx="9" ry="4" fill="#111"/>
+       <path d="M-32 22 L-22 -8" style="stroke:var(--shirt)" stroke-width="15" stroke-linecap="round" fill="none"/>
+       <path d="M-22 -8 L0 0" style="stroke:var(--skin)" stroke-width="5" stroke-linecap="round" fill="none"/>
+       <circle cx="-26" cy="-27" r="9" style="fill:var(--skin)"/>
+       <path d="M-35 -27 a9 9 0 0 1 18 0 z" fill="#2a1a10"/>
+       <circle cx="-21" cy="-26" r="1.3" fill="#222"/>
+       <circle cx="0" cy="0" r="4.5" style="fill:var(--skin)"/>
+      </g>
+     </defs>
+     <rect width="400" height="152" fill="#e8f4ff"/>
+     <rect y="152" width="400" height="48" fill="#bfdc9f"/>
+     <rect y="152" width="400" height="4" fill="#a5c885"/>
+     <line x1="200" y1="14" x2="200" y2="190" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/>
+     <g id="rope">
+      <rect x="22" y="94" width="356" height="12" rx="6" fill="url(#twist)"/>
+      <rect x="24" y="94.5" width="352" height="3.5" rx="2" fill="#fff" opacity=".25"/>
+      <rect x="24" y="102.5" width="352" height="3.5" rx="2" fill="#000" opacity=".2"/>
+     </g>
+     <g id="t1"><g class="pw pw1" id="pw1">
+      <use href="#man" x="125" y="100" style="--shirt:#1683e8;--skin:#f1c27d"/>
+      <use href="#man" x="75" y="100" style="--shirt:#0b5cad;--skin:#8d5524"/>
+     </g></g>
+     <g id="t2"><g class="pw pw2" id="pw2">
+      <use href="#man" transform="translate(275 100) scale(-1 1)" style="--shirt:#e53935;--skin:#c68642"/>
+      <use href="#man" transform="translate(325 100) scale(-1 1)" style="--shirt:#b71c1c;--skin:#ffdbac"/>
+     </g></g>
+     <g id="flag">
+      <circle cx="200" cy="100" r="9" fill="#7b4b1f" stroke="#f3c77b" stroke-width="3"/>
+      <path d="M194 108h12v17l-6-4-6 4z" fill="#e53935"/>
+     </g>
+    </svg>
+   </div>
+   <p class="instructions">Correct answer = pull rope 1 step • Wrong answer = no pull</p>
+  </section>
+
+  <section class="card team2" id="card2">
+   <div class="team-title"><span id="name2">🔴 Team 2</span><span class="badge red" id="score2">0 points</span></div>
+   <div class="question" id="q2">Press Start</div>
+   <div class="oppnote">Opponent is solving…</div>
+   <input class="answer" id="a2" type="number" inputmode="numeric" placeholder="Enter answer">
+   <div class="keypad" id="kp2"></div>
+   <div class="status" id="status2"></div>
+  </section>
+ </div>
+</div>
+
+<div class="result" id="result">
+ <div class="result-box">
+  <h2 id="winner">🏆 Winner!</h2>
+  <p id="finalText"></p>
+  <button class="start" id="againBtn">Play Again</button>
+  <p id="waitNote" style="display:none;margin:0">Waiting for the host to start a new round…</p>
+ </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const PREFIX = "mathtug-";
+const WIN_LEFT = 12, WIN_RIGHT = 88;
+
+let role = "local";          // local | host | guest
+let me = 0;                  // 1 = host (Team 1), 2 = guest (Team 2)
+let peer = null, conn = null;
+let gameRunning = false, timeLeft = 0, timerID = null, difficulty = "easy";
+let score1 = 0, score2 = 0, ropePos = 50;
+const answers = {1:null,2:null}, answered = {1:false,2:false};
+
+/* ---------- setup ---------- */
+for (let m = 1; m <= 10; m++) {
+  const o = document.createElement("option");
+  o.value = m * 60; o.textContent = m + (m === 1 ? " minute" : " minutes");
+  if (m === 10) o.selected = true;
+  $("timeLimit").appendChild(o);
+}
+[1,2].forEach(t => {
+  const kp = $("kp" + t);
+  [1,2,3,4,5,6,7,8,9,"×",0,"✓"].forEach(k => {
+    const b = document.createElement("button");
+    b.textContent = k;
+    if (k === "×") { b.className = "clear"; b.onclick = () => $("a"+t).value = ""; }
+    else if (k === "✓") { b.className = "check"; b.onclick = () => submitAnswer(t); }
+    else b.onclick = () => { if (gameRunning) $("a"+t).value += k; };
+    kp.appendChild(b);
+  });
+  $("a"+t).addEventListener("keydown", e => { if (e.key === "Enter") submitAnswer(t); });
+  // On phones use only the on-screen keypad so the keyboard doesn't cover the game
+  if (matchMedia("(pointer:coarse)").matches) $("a"+t).setAttribute("inputmode","none");
+});
+
+/* ---------- questions ---------- */
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function makeQuestion(level) {
+  let a, b, c, ans, text, type;
+  if (level === "easy") {
+    type = rand(1,3);
+    if (type === 1) { a = rand(1,50); b = rand(1,50); ans = a + b; text = `${a} + ${b} = ?`; }
+    else if (type === 2) { a = rand(20,80); b = rand(1,a); ans = a - b; text = `${a} − ${b} = ?`; }
+    else { a = rand(2,12); b = rand(2,12); ans = a * b; text = `${a} × ${b} = ?`; }
+  } else if (level === "medium") {
+    type = rand(1,4);
+    if (type === 1) { a = rand(10,80); b = rand(2,30); c = rand(2,12); ans = a + b * c; text = `${a} + ${b} × ${c} = ?`; }
+    else if (type === 2) { a = rand(20,100); b = rand(2,10); ans = a * b; text = `${a} × ${b} = ?`; }
+    else if (type === 3) { b = rand(2,12); ans = rand(2,20); a = b * ans; text = `${a} ÷ ${b} = ?`; }
+    else { a = rand(30,100); b = rand(5,25); c = rand(2,10); ans = a - b + c; text = `${a} − ${b} + ${c} = ?`; }
+  } else {
+    type = rand(1,4);
+    if (type === 1) { a = rand(10,50); b = rand(5,20); c = rand(2,10); ans = (a + b) * c; text = `(${a} + ${b}) × ${c} = ?`; }
+    else if (type === 2) { b = rand(2,15); c = rand(2,12); ans = rand(3,15); a = ans * b + c; text = `(${a} − ${c}) ÷ ${b} = ?`; }
+    else if (type === 3) { a = rand(5,20); b = rand(5,20); c = rand(2,8); ans = a * b - c; text = `${a} × ${b} − ${c} = ?`; }
+    else { a = rand(10,30); b = rand(2,8); c = rand(2,10); const d = rand(1,10); ans = a + b * c - d; text = `${a} + ${b} × ${c} − ${d} = ?`; }
+  }
+  return { text, ans };
+}
+const myTeams = () => role === "local" ? [1,2] : [me];
+function newQuestion(team) {
+  const q = makeQuestion(difficulty);
+  answers[team] = q.ans; answered[team] = false;
+  $("q"+team).textContent = q.text; $("a"+team).value = ""; $("status"+team).textContent = "";
+}
+
+/* ---------- game flow ---------- */
+function updateTimerDisplay() {
+  $("timer").textContent = Math.floor(timeLeft/60) + ":" + String(timeLeft % 60).padStart(2,"0");
+}
+function beginRound(cfg) {
+  clearInterval(timerID);
+  difficulty = cfg.difficulty;
+  score1 = score2 = 0; ropePos = 50; gameRunning = true; timeLeft = cfg.timeLimit;
+  $("result").style.display = "none";
+  updateUI(); updateTimerDisplay();
+  myTeams().forEach(newQuestion);
+}
+function startGame() {
+  if (role === "guest") return;
+  if ($("mode").value === "online" && !(conn && conn.open)) {
+    setNet("Wait until your opponent has joined the room.", "warn"); return;
+  }
+  const cfg = { difficulty: $("difficulty").value, timeLimit: parseInt($("timeLimit").value) };
+  beginRound(cfg);
+  send({ type:"start", ...cfg });
+  timerID = setInterval(() => {
+    timeLeft--; updateTimerDisplay();
+    send({ type:"tick", timeLeft });
+    if (timeLeft <= 0) finishRound();
+  }, 1000);
+}
+function submitAnswer(team) {
+  if (!gameRunning || answered[team] || !myTeams().includes(team)) return;
+  const input = $("a"+team);
+  if (input.value === "") return;
+  answered[team] = true;
+  const correct = Number(input.value) === answers[team];
+  showStatus(team, correct);
+  if (role === "guest") send({ type:"answer", correct });
+  else applyAnswer(team, correct);
+  setTimeout(() => { if (gameRunning) newQuestion(team); }, 450);
+}
+// Runs on the host (or the single device in local mode) — it owns the game state
+function applyAnswer(team, correct) {
+  if (!gameRunning) return;
+  if (correct) {
+    if (team === 1) { score1++; ropePos = Math.max(WIN_LEFT, ropePos - 8); }
+    else { score2++; ropePos = Math.min(WIN_RIGHT, ropePos + 8); }
+    updateUI(); pullAnim(team);
+  }
+  send({ type:"state", score1, score2, ropePos, timeLeft, last:{ team, correct } });
+  if (correct && (ropePos <= WIN_LEFT || ropePos >= WIN_RIGHT)) endRound(team);
+}
+function finishRound() { endRound(score1 > score2 ? 1 : score2 > score1 ? 2 : 0); }
+function endRound(winner) {
+  clearInterval(timerID); gameRunning = false;
+  send({ type:"end", winner, score1, score2 });
+  showEnd(winner);
+}
+function showEnd(winner) {
+  let title;
+  if (role === "local") title = winner === 1 ? "🏆 🔵 Team 1 Wins!" : winner === 2 ? "🏆 🔴 Team 2 Wins!" : "🤝 Draw!";
+  else title = winner === 0 ? "🤝 Draw!" : winner === me ? "🏆 You Win!" : "😢 You Lose";
+  $("winner").textContent = title;
+  $("finalText").textContent = `Team 1: ${score1} points • Team 2: ${score2} points`;
+  $("againBtn").style.display = role === "guest" ? "none" : "";
+  $("waitNote").style.display = role === "guest" ? "" : "none";
+  $("result").style.display = "flex";
+}
+function resetLocal() {
+  clearInterval(timerID); gameRunning = false; score1 = score2 = 0; ropePos = 50;
+  [1,2].forEach(t => { $("q"+t).textContent = "Press Start"; $("a"+t).value = ""; $("status"+t).textContent = ""; });
+  $("timer").textContent = "--"; $("result").style.display = "none"; updateUI();
+}
+function resetGame() { if (role === "guest") return; resetLocal(); send({ type:"reset" }); }
+
+function showStatus(team, ok, auto) {
+  const s = $("status"+team);
+  s.textContent = ok ? "✓ Correct! Pull!" : "✗ Wrong — no pull";
+  s.style.color = ok ? "#16833c" : "#d92828";
+  if (auto) setTimeout(() => s.textContent = "", 1200);
+}
+function pullAnim(team) {
+  const g = $("pw"+team);
+  g.classList.remove("pulling"); void g.offsetWidth; g.classList.add("pulling");
+}
+function updateUI() {
+  $("score1").textContent = score1 + " points"; $("score2").textContent = score2 + " points";
+  $("pull1").textContent = score1; $("pull2").textContent = score2;
+  const shift = (ropePos - 50) * 0.6;            // SVG units
+  ["t1","t2","flag"].forEach(id => $(id).style.transform = `translateX(${shift}px)`);
+  $("twist").setAttribute("patternTransform", `translate(${shift} 0)`);
+}
+
+/* ---------- online (PeerJS / WebRTC, no server code needed) ---------- */
+function send(msg) { if (conn && conn.open) conn.send(msg); }
+function setNet(text, cls) { const n = $("netStatus"); n.textContent = text; n.className = "netstatus " + (cls || ""); }
+function genCode() {
+  const c = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = "";
+  for (let i = 0; i < 5; i++) s += c[Math.floor(Math.random() * c.length)];
+  return s;
+}
+function applyRoleLayout() {
+  const online = role !== "local";
+  [1,2].forEach(t => {
+    $("card"+t).classList.toggle("opp", online && t !== me);
+    $("name"+t).textContent = (t === 1 ? "🔵 Team 1" : "🔴 Team 2") + (online && t === me ? " (You)" : "");
+  });
+  ["difficulty","timeLimit","startBtn","resetBtn"].forEach(id => $(id).disabled = role === "guest");
+}
+function closeNet() {
+  try { if (conn) { conn.removeAllListeners(); conn.close(); } } catch (e) {}
+  try { if (peer) { peer.removeAllListeners(); peer.destroy(); } } catch (e) {}
+  conn = peer = null; role = "local"; me = 0;
+  $("roomBox").classList.remove("show");
+  resetLocal(); applyRoleLayout();
+}
+function wire(c, onOpen) {
+  c.on("data", onMsg);
+  c.on("close", () => {
+    clearInterval(timerID); gameRunning = false;
+    if (role === "host") { conn = null; setNet("Opponent left. Waiting for someone to join…", "warn"); resetLocal(); }
+    else { closeNet(); setNet("Disconnected from the host.", "bad"); }
+  });
+  c.on("error", () => setNet("Connection problem. Try again.", "bad"));
+  c.open ? onOpen() : c.on("open", onOpen);
+}
+function noPeerJS() {
+  if (typeof Peer !== "undefined") return false;
+  setNet("Online library did not load. Turn off ad-blocker/VPN, check internet, then refresh.", "bad");
+  return true;
+}
+function createRoom() {
+  if (noPeerJS()) return;
+  closeNet(); setNet("Creating room…");
+  const code = genCode();
+  peer = new Peer(PREFIX + code);
+  peer.on("disconnected", () => { if (role !== "host") setNet("Cannot reach the PeerJS server. Try another network (Wi-Fi/mobile data) or VPN.", "bad"); });
+  setTimeout(() => { if (role !== "host" && peer) setNet("Room not created: cannot reach the PeerJS server. Try another network (Wi-Fi/mobile data) or VPN.", "bad"); }, 10000);
+  peer.on("open", () => {
+    role = "host"; me = 1; applyRoleLayout();
+    $("roomCode").textContent = code; $("roomBox").classList.add("show");
+    setNet("Room ready. Share the code and wait for your opponent…");
+  });
+  peer.on("connection", c => {
+    if (conn && conn.open) { c.on("open", () => { c.send({ type:"full" }); setTimeout(() => c.close(), 300); }); return; }
+    conn = c;
+    wire(c, () => setNet("🟢 Opponent connected! Press Start.", "ok"));
+  });
+  peer.on("error", err => err.type === "unavailable-id" ? createRoom() : setNet("Error: " + err.type, "bad"));
+}
+function joinRoom(autoCode) {
+  const code = (autoCode || $("roomInput").value).trim().toUpperCase();
+  if (code.length < 5) { setNet("Enter the 5-character room code.", "warn"); return; }
+  if (noPeerJS()) return;
+  closeNet(); setNet("Connecting…");
+  peer = new Peer();
+  peer.on("open", () => {
+    conn = peer.connect(PREFIX + code, { reliable:true });
+    wire(conn, () => {
+      role = "guest"; me = 2; applyRoleLayout();
+      setNet("🟢 Connected to room " + code + ". Waiting for the host to start…", "ok");
+      send({ type:"hello" });
+    });
+  });
+  peer.on("error", err => setNet(err.type === "peer-unavailable" ? "Room not found. Check the code." : "Error: " + err.type, "bad"));
+  setTimeout(() => { if (role !== "guest" && peer) setNet("Could not connect. Check the code and try again.", "bad"); }, 12000);
+}
+function onMsg(m) {
+  switch (m.type) {
+    case "start": $("difficulty").value = m.difficulty; $("timeLimit").value = m.timeLimit; beginRound(m); break;
+    case "tick": timeLeft = m.timeLeft; updateTimerDisplay(); break;
+    case "state":
+      score1 = m.score1; score2 = m.score2; ropePos = m.ropePos; timeLeft = m.timeLeft;
+      updateUI(); updateTimerDisplay();
+      if (m.last) { if (m.last.team !== me) showStatus(m.last.team, m.last.correct, true); if (m.last.correct) pullAnim(m.last.team); }
+      break;
+    case "answer": if (role === "host" && gameRunning) { showStatus(2, m.correct, true); applyAnswer(2, m.correct); } break;
+    case "end": clearInterval(timerID); gameRunning = false; score1 = m.score1; score2 = m.score2; updateUI(); showEnd(m.winner); break;
+    case "reset": resetLocal(); break;
+    case "full": closeNet(); setNet("That room already has two players.", "bad"); break;
+  }
+}
+
+/* ---------- buttons ---------- */
+$("startBtn").onclick = startGame;
+$("againBtn").onclick = startGame;
+$("resetBtn").onclick = resetGame;
+$("createBtn").onclick = createRoom;
+$("joinBtn").onclick = () => joinRoom();
+$("mode").onchange = () => {
+  const online = $("mode").value === "online";
+  $("onlinePanel").classList.toggle("show", online);
+  if (!online) { closeNet(); setNet("Create a room and share the code, or enter a friend's code to join."); }
+};
+$("copyBtn").onclick = () => {
+  const url = location.origin + location.pathname + "?room=" + $("roomCode").textContent;
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(
+    () => setNet("Invite link copied. Send it to your friend!", "ok"),
+    () => setNet("Invite link: " + url, "ok"));
+};
+addEventListener("resize", updateUI);
+
+// Opening an invite link (?room=ABCDE) joins automatically
+const invite = new URLSearchParams(location.search).get("room");
+updateUI();
+if (invite) { $("mode").value = "online"; $("onlinePanel").classList.add("show"); $("roomInput").value = invite.toUpperCase(); joinRoom(invite); }
+</script>
+</body>
+</html>
