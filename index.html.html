@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathFace-Off</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(135deg, #eef6ff, #f8fbff);
+            min-height: 100vh;
+            color: #172033;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 22px
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 18px
+        }
+
+        h1 {
+            font-size: clamp(28px, 4vw, 48px);
+            color: #172033
+        }
+
+        .subtitle {
+            color: #64748b;
+            margin-top: 7px
+        }
+
+        .controls {
+            background: #fff;
+            border-radius: 18px;
+            padding: 15px;
+            box-shadow: 0 8px 30px rgba(15, 23, 42, .08);
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 18px
+        }
+
+        select,
+        button {
+            border: 0;
+            border-radius: 10px;
+            padding: 11px 16px;
+            font-size: 15px
+        }
+
+        select {
+            border: 1px solid #d7dee9;
+            background: #fff
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: bold
+        }
+
+        .start {
+            background: #172033;
+            color: white
+        }
+
+        .reset {
+            background: #e8eef7;
+            color: #172033
+        }
+
+        .game {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr 1fr;
+            gap: 16px;
+            align-items: stretch
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: 0 10px 35px rgba(15, 23, 42, .09);
+        }
+
+        .team1 {
+            border-top: 6px solid #1683e8
+        }
+
+        .team2 {
+            border-top: 6px solid #e53935
+        }
+
+        .team-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold
+        }
+
+        .badge {
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 12px
+        }
+
+        .blue {
+            background: #e6f2ff;
+            color: #0874d1
+        }
+
+        .red {
+            background: #ffebeb;
+            color: #d92828
+        }
+
+        .question {
+            min-height: 92px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 30px;
+            font-weight: 800;
+            margin: 14px 0;
+            background: #f7faff;
+            border-radius: 14px
+        }
+
+        .answer {
+            width: 100%;
+            padding: 13px;
+            border: 2px solid #dbe4ef;
+            border-radius: 10px;
+            font-size: 22px;
+            text-align: center;
+            outline: none
+        }
+
+        .answer:focus {
+            border-color: #578ee8
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px
+        }
+
+        .keypad button {
+            background: #f2f6fb;
+            border: 1px solid #e1e8f0;
+            padding: 13px;
+            font-size: 18px
+        }
+
+        .keypad .clear {
+            background: #ffe8e8;
+            color: #c62828
+        }
+
+        .keypad .check {
+            background: #dff7e8;
+            color: #17823b
+        }
+
+        .status {
+            text-align: center;
+            min-height: 23px;
+            margin-top: 9px;
+            font-weight: bold
+        }
+
+        .center {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #fff;
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: 0 10px 35px rgba(15, 23, 42, .09)
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-weight: bold
+        }
+
+        .score1 {
+            color: #1683e8
+        }
+
+        .score2 {
+            color: #e53935
+        }
+
+        .timer {
+            font-size: 22px;
+            font-weight: bold;
+            margin: 10px
+        }
+
+        .timer span {
+            font-variant-numeric: tabular-nums
+        }
+
+        .rope-area {
+            width: 100%;
+            height: 270px;
+            position: relative;
+            overflow: hidden
+        }
+
+        .center-line {
+            position: absolute;
+            left: 50%;
+            top: 28px;
+            bottom: 28px;
+            border-left: 2px dashed #cbd5e1
+        }
+
+        .rope {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 86%;
+            height: 12px;
+            transform: translate(-50%, -50%);
+            background: #b77936;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, .2);
+            transition: left .55s ease
+        }
+
+        .knot {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 25px;
+            height: 25px;
+            background: #7b4b1f;
+            border-radius: 50%;
+            border: 4px solid #f3c77b;
+            z-index: 3;
+            transition: left .55s ease
+        }
+
+        .persons {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none
+        }
+
+        .person {
+            font-size: 58px;
+            display: flex;
+            gap: 2px;
+            transition: transform .55s ease
+        }
+
+        .p1 {
+            transform: translateX(-5px)
+        }
+
+        .p2 {
+            transform: translateX(5px)
+        }
+
+        .instructions {
+            text-align: center;
+            color: #64748b;
+            font-size: 13px
+        }
+
+        .result {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, .68);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 20
+        }
+
+        .result-box {
+            background: #fff;
+            border-radius: 24px;
+            padding: 35px;
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 70px rgba(0, 0, 0, .3)
+        }
+
+        .result-box h2 {
+            font-size: 38px;
+            margin-bottom: 10px
+        }
+
+        .result-box p {
+            color: #64748b;
+            margin-bottom: 20px
+        }
+
+        @media(max-width:850px) {
+            .game {
+                grid-template-columns: 1fr
+            }
+
+            .center {
+                order: -1
+            }
+
+            .rope-area {
+                height: 220px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>MathFace-Off</h1>
+            <p class="subtitle">Solve faster and pull the rope toward your team!</p>
+        </header>
+
+        <div class="controls">
+            <label><b>Difficulty:</b></label>
+            <select id="difficulty">
+                <option value="easy">Easy — Addition, Subtraction, Multiplication</option>
+                <option value="medium">Medium — Mixed Operations</option>
+                <option value="hard">Hard — Larger & Multi-Step Questions</option>
+            </select>
+            <label><b>Time:</b></label>
+            <select id="timeLimit">
+                <option value="60">1 minute</option>
+                <option value="120">2 minutes</option>
+                <option value="180">3 minutes</option>
+                <option value="240">4 minutes</option>
+                <option value="300">5 minutes</option>
+                <option value="360">6 minutes</option>
+                <option value="420">7 minutes</option>
+                <option value="480">8 minutes</option>
+                <option value="540">9 minutes</option>
+                <option value="600" selected>10 minutes</option>
+            </select>
+            <button class="start" onclick="startGame()">▶ Start Game</button>
+            <button class="reset" onclick="resetGame()">↻ Reset</button>
+        </div>
+
+        <div class="game">
+            <section class="card team1">
+                <div class="team-title">
+                    <span>🔵 Team 1</span><span class="badge blue" id="score1">0 points</span>
+                </div>
+                <div class="question" id="q1">Press Start</div>
+                <input class="answer" id="a1" type="number" inputmode="numeric" placeholder="Enter answer">
+                <div class="keypad" data-input="a1">
+                    <button onclick="key(1,'a1')">1</button><button onclick="key(2,'a1')">2</button><button
+                        onclick="key(3,'a1')">3</button>
+                    <button onclick="key(4,'a1')">4</button><button onclick="key(5,'a1')">5</button><button
+                        onclick="key(6,'a1')">6</button>
+                    <button onclick="key(7,'a1')">7</button><button onclick="key(8,'a1')">8</button><button
+                        onclick="key(9,'a1')">9</button>
+                    <button class="clear" onclick="clearAns('a1')">×</button><button onclick="key(0,'a1')">0</button>
+                    <button class="check" onclick="submitAnswer(1)">✓</button>
+                </div>
+                <div class="status" id="status1"></div>
+            </section>
+
+            <section class="center">
+                <div class="scoreboard">
+                    <span class="score1">TEAM 1: <b id="pull1">0</b></span>
+                    <span class="score2">TEAM 2: <b id="pull2">0</b></span>
+                </div>
+                <div class="timer">⏱ <span id="timer">--</span></div>
+                <div class="rope-area">
+                    <div class="center-line"></div>
+                    <div class="rope" id="rope"></div>
+                    <div class="knot" id="knot"></div>
+                    <div class="persons">
+                        <div class="person p1" id="person1">🏃‍♂️</div>
+                        <div class="person p2" id="person2"><bdo dir="ltr"></bdo></div>
+                    </div>
+                </div>
+                <p class="instructions">Correct answer = pull rope 1 step • Wrong answer = no pull</p>
+            </section>
+
+            <section class="card team2">
+                <div class="team-title">
+                    <span>🔴 Team 2</span><span class="badge red" id="score2">0 points</span>
+                </div>
+                <div class="question" id="q2">Press Start</div>
+                <input class="answer" id="a2" type="number" inputmode="numeric" placeholder="Enter answer">
+                <div class="keypad" data-input="a2">
+                    <button onclick="key(1,'a2')">1</button><button onclick="key(2,'a2')">2</button><button
+                        onclick="key(3,'a2')">3</button>
+                    <button onclick="key(4,'a2')">4</button><button onclick="key(5,'a2')">5</button><button
+                        onclick="key(6,'a2')">6</button>
+                    <button onclick="key(7,'a2')">7</button><button onclick="key(8,'a2')">8</button><button
+                        onclick="key(9,'a2')">9</button>
+                    <button class="clear" onclick="clearAns('a2')">×</button><button onclick="key(0,'a2')">0</button>
+                    <button class="check" onclick="submitAnswer(2)">✓</button>
+                </div>
+                <div class="status" id="status2"></div>
+            </section>
+        </div>
+    </div>
+
+    <div class="result" id="result">
+        <div class="result-box">
+            <h2 id="winner">🏆 Winner!</h2>
+            <p id="finalText"></p>
+            <button class="start" onclick="startGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        let gameRunning = false, timeLeft = 20, timerID = null;
+        let score1 = 0, score2 = 0, ropePos = 50;
+        let answers = { 1: null, 2: null };
+        let answered = { 1: false, 2: false };
+
+        function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+        function makeQuestion(level) {
+            let a, b, c, ans, text, type;
+            if (level === "easy") {
+                type = rand(1, 3);
+                if (type === 1) { a = rand(1, 50); b = rand(1, 50); ans = a + b; text = `${a} + ${b} = ?`; }
+                else if (type === 2) { a = rand(20, 80); b = rand(1, a); ans = a - b; text = `${a} − ${b} = ?`; }
+                else { a = rand(2, 12); b = rand(2, 12); ans = a * b; text = `${a} × ${b} = ?`; }
+            } else if (level === "medium") {
+                type = rand(1, 4);
+                if (type === 1) { a = rand(10, 80); b = rand(2, 30); c = rand(2, 12); ans = a + b * c; text = `${a} + ${b} × ${c} = ?`; }
+                else if (type === 2) { a = rand(20, 100); b = rand(2, 10); ans = a * b; text = `${a} × ${b} = ?`; }
+                else if (type === 3) { b = rand(2, 12); ans = rand(2, 20); a = b * ans; text = `${a} ÷ ${b} = ?`; }
+                else { a = rand(30, 100); b = rand(5, 25); c = rand(2, 10); ans = a - b + c; text = `${a} − ${b} + ${c} = ?`; }
+            } else {
+                type = rand(1, 4);
+                if (type === 1) { a = rand(10, 50); b = rand(5, 20); c = rand(2, 10); ans = (a + b) * c; text = `(${a} + ${b}) × ${c} = ?`; }
+                else if (type === 2) { b = rand(2, 15); c = rand(2, 12); ans = rand(3, 15); a = ans * b + c; ans = (a - c) / b; text = `(${a} − ${c}) ÷ ${b} = ?`; }
+                else if (type === 3) { a = rand(5, 20); b = rand(5, 20); c = rand(2, 8); ans = a * b - c; text = `${a} × ${b} − ${c} = ?`; }
+                else { a = rand(10, 30); b = rand(2, 8); c = rand(2, 10); ans = a + (b * c) - rand(1, 10); let d = a + b * c - ans; text = `${a} + ${b} × ${c} − ${d} = ?`; }
+            }
+            return { text, ans };
+        }
+
+        function nextQuestions() {
+            const level = document.getElementById("difficulty").value;
+            let q = makeQuestion(level); answers[1] = q.ans; answered[1] = false;
+            document.getElementById("q1").textContent = q.text; document.getElementById("a1").value = "";
+            document.getElementById("status1").textContent = "";
+            q = makeQuestion(level); answers[2] = q.ans; answered[2] = false;
+            document.getElementById("q2").textContent = q.text; document.getElementById("a2").value = "";
+            document.getElementById("status2").textContent = "";
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById("timer").textContent =
+                minutes + ":" + String(seconds).padStart(2, "0");
+        }
+
+        function startGame() {
+            clearInterval(timerID);
+            score1 = score2 = 0; ropePos = 50; gameRunning = true;
+            document.getElementById("result").style.display = "none";
+            updateUI();
+            nextQuestions();
+            timeLeft = parseInt(document.getElementById("timeLimit").value);
+            updateTimerDisplay();
+            timerID = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) finishRound();
+            }, 1000);
+        }
+
+        function submitAnswer(team) {
+            if (!gameRunning || answered[team]) return;
+            const input = document.getElementById("a" + team);
+            if (input.value === "") return;
+            answered[team] = true;
+            const correct = Number(input.value) === answers[team];
+            const status = document.getElementById("status" + team);
+            if (correct) {
+                status.textContent = "✓ Correct! Pull!";
+                status.style.color = "#16833c";
+                if (team === 1) { score1++; ropePos = Math.max(12, ropePos - 8); }
+                else { score2++; ropePos = Math.min(88, ropePos + 8); }
+                updateUI();
+                if (ropePos <= 12 || ropePos >= 88) { finishGame(team); return; }
+            } else {
+                status.textContent = "✗ Wrong — no pull";
+                status.style.color = "#d92828";
+            }
+            // Automatically give the team a new question after answering.
+            setTimeout(() => {
+                if (gameRunning && ropePos > 12 && ropePos < 88) {
+                    const q = makeQuestion(document.getElementById("difficulty").value);
+                    answers[team] = q.ans; answered[team] = false;
+                    document.getElementById("q" + team).textContent = q.text;
+                    document.getElementById("a" + team).value = "";
+                    status.textContent = "";
+                }
+            }, 450);
+        }
+
+        function finishRound() {
+            clearInterval(timerID);
+            gameRunning = false;
+            let title, text;
+            if (score1 > score2) { title = "🔵 Team 1 Wins the Round!"; text = `Team 1: ${score1} points • Team 2: ${score2} points`; }
+            else if (score2 > score1) { title = "🔴 Team 2 Wins the Round!"; text = `Team 1: ${score1} points • Team 2: ${score2} points`; }
+            else { title = "🤝 Draw!"; text = `Both teams scored ${score1} points.`; }
+            showResult(title, text);
+        }
+
+        function finishGame(team) {
+            clearInterval(timerID); gameRunning = false;
+            const title = team === 1 ? "🏆 🔵 Team 1 Wins!" : "🏆 🔴 Team 2 Wins!";
+            showResult(title, `Final score — Team 1: ${score1} • Team 2: ${score2}`);
+        }
+
+        function showResult(title, text) {
+            document.getElementById("winner").textContent = title;
+            document.getElementById("finalText").textContent = text;
+            document.getElementById("result").style.display = "flex";
+        }
+
+        function updateUI() {
+            document.getElementById("score1").textContent = score1 + " points";
+            document.getElementById("score2").textContent = score2 + " points";
+            document.getElementById("pull1").textContent = score1;
+            document.getElementById("pull2").textContent = score2;
+            document.getElementById("rope").style.left = ropePos + "%";
+            document.getElementById("knot").style.left = ropePos + "%";
+            document.getElementById("person1").style.transform = `translateX(${(50 - ropePos) * 0.45}px)`;
+            document.getElementById("person2").style.transform = `translateX(${(50 - ropePos) * 0.45}px)`;
+        }
+
+        function key(n, id) {
+            if (!gameRunning) return;
+            const el = document.getElementById(id);
+            el.value += n;
+        }
+        function clearAns(id) { document.getElementById(id).value = ""; }
+        function resetGame() {
+            clearInterval(timerID); gameRunning = false; score1 = score2 = 0; ropePos = 50;
+            document.getElementById("q1").textContent = "Press Start";
+            document.getElementById("q2").textContent = "Press Start";
+            document.getElementById("a1").value = ""; document.getElementById("a2").value = "";
+            document.getElementById("status1").textContent = ""; document.getElementById("status2").textContent = "";
+            document.getElementById("timer").textContent = "--";
+            document.getElementById("result").style.display = "none"; updateUI();
+        }
+
+        document.getElementById("a1").addEventListener("keydown", e => { if (e.key === "Enter") submitAnswer(1) });
+        document.getElementById("a2").addEventListener("keydown", e => { if (e.key === "Enter") submitAnswer(2) });
+        updateUI();
+    </script>
+</body>
+
+</html>
